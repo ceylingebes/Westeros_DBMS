@@ -21,6 +21,7 @@ def initialize_type(type_name, primary_key_index):
             for _ in range(8):
                 f.write("\n")
 
+
 def add_record(type_name, values):
     record_str = " ".join(values)
     new_record_added = False
@@ -64,7 +65,6 @@ def add_record(type_name, values):
         for i in range(0, len(new_content), 10):
             f.writelines(new_content[i:i+10])
         f.truncate()
-
 
         
 """ 
@@ -153,6 +153,8 @@ def delete_record(type_name, search_primary_key):
         f.truncate()
 
     return page_modified  # Return True if any page was modified
+
+
 """ 
 def delete_record(type_name, search_primary_key):
 
@@ -195,7 +197,6 @@ def delete_record(type_name, search_primary_key):
     return False  # Record not found """
 
     
-
 def search_record(type_name, primary_key):
     with open(f"{type_name}.txt", 'r') as f:
         primary_key_index = int(f.readline().strip())
@@ -217,14 +218,10 @@ def search_record(type_name, primary_key):
     return None
 
 
-
-
-
-
-
 def log_operation(operation, status):
     with open('log.csv', 'a') as h:
         h.write(f"{int(time.time())}, {operation}, {status}\n")
+
 
 def in_create_type(operation):
     _, _, type_name, num_fields, primary_key_index, *fields = operation.split()
@@ -261,9 +258,11 @@ def in_delete_record(operation):
     else:
         log_operation(operation, 'failure')
 
+
 def in_search_record(operation):
     _, _,  type_name, search_primary_key = operation.split()
     record = search_record(type_name, search_primary_key)
+    print(record)
     if record:
         log_operation(operation, 'success')
         return record
@@ -271,8 +270,8 @@ def in_search_record(operation):
         log_operation(operation, 'failure')
         return ""
 
+
 def main(input_file):
-    output_lines = []
     with open(input_file, 'r') as f:
         operations = f.readlines()
     for operation in operations:
@@ -285,9 +284,10 @@ def main(input_file):
         elif operation.startswith('search record'):
             result = in_search_record(operation.strip())
             if result:
-                output_lines.append(result)
-    with open('output.txt', 'w') as g:
-        g.write("\n".join(output_lines))
+                with open('output.txt', 'a') as g:
+                    g.write(" ".join(result))
+                    g.write("\n")
+                    g.close()
 
 if __name__ == "__main__":
     import sys
