@@ -1,10 +1,11 @@
 import time
 import os
 
-MAX_FIELDS = 6
-MAX_TYPE_NAME_LENGTH = 12
+MAX_NUMBER_OF_FIELDS = 10
+MAX_TYPE_NAME_LENGTH = 20
 MAX_FIELD_NAME_LENGTH = 20
 MAX_RECORDS_PER_PAGE = 10
+MAX_PAGES_PER_FILE = 20
 
 
 def initialize_type(type_name, primary_key_index):
@@ -219,14 +220,14 @@ def search_record(type_name, primary_key):
 
 
 def log_operation(operation, status):
-    with open('log.csv', 'a') as h:
+    with open('log.txt', 'a') as h:
         h.write(f"{int(time.time())}, {operation}, {status}\n")
 
 
 def in_create_type(operation):
     _, _, type_name, num_fields, primary_key_index, *fields = operation.split()
     fields = [(fields[i], fields[i+1]) for i in range(0, len(fields), 2)]
-    if len(fields) > MAX_FIELDS or len(type_name) > MAX_TYPE_NAME_LENGTH or any(len(f[0]) > MAX_FIELD_NAME_LENGTH for f in fields):
+    if len(fields) > MAX_NUMBER_OF_FIELDS or len(type_name) > MAX_TYPE_NAME_LENGTH or any(len(f[0]) > MAX_FIELD_NAME_LENGTH for f in fields):
         log_operation(operation, 'failure')
         return
     if os.path.exists(f"{type_name}.txt"):
