@@ -253,6 +253,9 @@ def in_create_record(operation):
 
 def in_delete_record(operation):
     _, _, type_name, delete_primary_key = operation.split()
+    if not os.path.exists(f"{type_name}.txt"):
+        log_operation(operation, 'failure')
+        return
     if delete_record(type_name, delete_primary_key):
         log_operation(operation, 'success')
     else:
@@ -288,6 +291,7 @@ def main(input_file):
                     g.write(" ".join(result))
                     g.write("\n")
                     g.close()
+
 
 if __name__ == "__main__":
     import sys
