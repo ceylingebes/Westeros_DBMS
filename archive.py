@@ -9,220 +9,117 @@ MAX_PAGES_PER_FILE = 20
 
 
 def initialize_type(type_name, primary_key_index):
-    filename = f"{type_name}.txt"
-    
-    #open a new file but does not write anything if it doesn't exist
-    if not os.path.exists(filename):
-        with open(filename, 'w') as f:
-
-            f.write(str(int(primary_key_index) - 1))
+    if not os.path.exists(type_name):
+        os.makedirs(type_name)
+    # Create the first page file
+    with open(f"{type_name}/page_0.txt", 'w') as f:
+        f.write(str(int(primary_key_index) - 1) + "\n")
+        initial_vacancy_list = str([0] * 9)
+        f.write(initial_vacancy_list + "\n")
+        for _ in range(8):
             f.write("\n")
-            initial_vacancy_list = str([0] * 9)
-            f.write(initial_vacancy_list + "\n")
-            for _ in range(8):
-                f.write("\n")
-
 
 def add_record(type_name, values):
     record_str = " ".join(values)
     new_record_added = False
-    new_content = []
 
-    with open(f"{type_name}.txt", 'r+') as f:
-        primary_key_index = int(f.readline().strip())
-        new_content.append(str(primary_key_index) + "\n")
-        
-        while True:
-            # Remember the current position in the file
-            current_position = f.tell()
+    # Find the latest page
+    page_num = 0
+    while os.path.exists(f"{type_name}/page_{page_num}.txt"):
+        page_num += 1
+    page_num -= 1
+
+    for i in range(page_num + 1):
+        page_path = f"{type_name}/page_{i}.txt"
+        with open(page_path, 'r+') as f:
+            primary_key_index = int(f.readline().strip())
+            vacancy = eval(f.readline().strip())
+            lines = [f.readline().strip() for _ in range(9)]
             
-            # Read the next 10 lines
-            lines = [f.readline().strip() for _ in range(10)]
-            if not lines[0]:
-                break  # Reached the end of the file
-            
-            vacancy = eval(lines[0])  # Convert vacancy list string to list
-            if 0 in vacancy and not new_record_added:  # Check if there are any vacant slots in the page
+            if 0 in vacancy and not new_record_added:  
                 for i, is_occupied in enumerate(vacancy):
                     if not is_occupied:
-                        # Mark the vacancy list to indicate this slot is now occupied
                         vacancy[i] = 1
-                        # Update the page in the file
-                        lines[0] = str(vacancy)
-                        lines[i + 1] = record_str
+                        lines[i] = record_str
                         new_record_added = True
                         break
-            
-            new_content.extend([line + "\n" for line in lines])
-        
-        if not new_record_added:
-            # If no vacancy was found in existing pages, add a new page
-            vacancy_list = [1] + [0] * 8
-            new_page = [str(vacancy_list)] + [record_str] + [""] * 8
-            new_content.extend([line + "\n" for line in new_page])
-        
-        # Write the new content to the file in 10-line chunks
-        f.seek(0)
-        for i in range(0, len(new_content), 10):
-            f.writelines(new_content[i:i+10])
-        f.truncate()
+                
+                if new_record_added:
+                    f.seek(0)
+                    f.write(str(primary_key_index) + "\n")
+                    f.write(str(vacancy) + "\n")
+                    f.writelines([line + "\n" for line in lines])
+                    f.truncate()
+                    break
 
-        
-""" 
-def add_record(type_name, values):
-    record_str = " ".join(values)
-    new_record_added = False
-    
-    with open(f"{type_name}.txt", 'r+') as f:
-
-        primary_key_index = int(f.readline().strip())
-        
-        while True:
-            # Remember the current position in the file
-            current_position = f.tell()
-            
-            # Read the next 10 lines
-            lines = [f.readline().strip() for _ in range(10)]
-            if not lines[0]:
-                break  # Reached the end of the file
-            
-            vacancy = eval(lines[0])  # Convert vacancy list string to list
-            if 0 in vacancy:  # Check if there are any vacant slots in the page
-                for i, is_occupied in enumerate(vacancy):
-                    if not is_occupied:
-                        # Mark the vacancy list to indicate this slot is now occupied
-                        vacancy[i] = 1
-                        # Update the page in the file
-                        lines[0] = str(vacancy)
-                        lines[i + 1] = record_str
-                        
-                        # Go back to the start of this page in the file
-                        f.seek(current_position)
-                        f.write("\n".join(lines) + "\n")
-                        new_record_added = True
-                        break
-            
-        
-        if not new_record_added:
-            # If no vacancy was found in existing pages, add a new page
-            vacancy_list = [1] + [0] * 8
-            new_page = [str(vacancy_list)] + [record_str] + [""] * 8
-            f.write("\n".join(new_page) + "\n")
-        
-        f.close() """
-    
+    if not new_record_added:
+        vacancy_list = [1] + [0] * 8
+        new_page = [str(vacancy_list)] + [record_str] + [""] * 8
+        new_page_path = f"{type_name}/page_{page_num + 1}.txt"
+        with open(new_page_path, 'w') as f:
+            f.write(str(primary_key_index) + "\n")
+            f.writelines([line + "\n" for line in new_page])
+            f.truncate()
 
 def delete_record(type_name, search_primary_key):
-    with open(f"{type_name}.txt", 'r+') as f:
-        # Read the primary key index from the first line
-        primary_key_index = int(f.readline().strip())
-        new_content = [str(primary_key_index) + "\n"]  # Start with the primary key index
+    page_num = 0
+    page_modified = False
 
-        while True:
-            # Remember the current position in the file
-            current_position = f.tell()
+    while os.path.exists(f"{type_name}/page_{page_num}.txt"):
+        page_path = f"{type_name}/page_{page_num}.txt"
+        with open(page_path, 'r+') as f:
+            primary_key_index = int(f.readline().strip())
+            vacancy = eval(f.readline().strip())
+            lines = [f.readline().strip() for _ in range(9)]
             
-            # Read the next 10 lines
-            lines = [f.readline().strip() for _ in range(10)]
-            if not lines[0]:
-                break  # Reached the end of the file
-            
-            vacancy = eval(lines[0])  # Convert vacancy list string to list
-            page_modified = False
-
-            if 1 in vacancy:  # Check if there are any occupied slots in the page
+            if 1 in vacancy:
                 for i, is_occupied in enumerate(vacancy):
                     if is_occupied:
-                        record_fields = lines[i + 1].split()
+                        record_fields = lines[i].split()
                         record_primary_key = record_fields[primary_key_index]
                         if record_primary_key == search_primary_key:
-                            # Mark the vacancy list to indicate this slot is now vacant
                             vacancy[i] = 0
-                            # Clear the record in the page
-                            lines[i + 1] = ""
+                            lines[i] = ""
                             page_modified = True
-            
-            if page_modified:
-                # Update the vacancy list in the page
-                lines[0] = str(vacancy)
-            new_content.extend([line + "\n" for line in lines])
-        
-        # Write the new content to the file in 10-line chunks
-        f.seek(0)
-        for i in range(0, len(new_content), 10):
-            f.writelines(new_content[i:i+10])
-        f.truncate()
+                            break
+                
+                if page_modified:
+                    f.seek(0)
+                    f.write(str(primary_key_index) + "\n")
+                    f.write(str(vacancy) + "\n")
+                    f.writelines([line + "\n" for line in lines])
+                    f.truncate()
+                    break
 
-    return page_modified  # Return True if any page was modified
+        page_num += 1
 
+    return page_modified
 
-""" 
-def delete_record(type_name, search_primary_key):
-
-    with open(f"{type_name}.txt", 'r+') as f:
-        # first line is the primary key index
-        primary_key_index = int(f.readline().strip())
-
-        while True:
-            # Remember the current position in the file
-            current_position = f.tell()
-            
-            # Read the next 10 lines
-            lines = [f.readline().strip() for _ in range(10)]
-            if not lines[0]:
-                break  # Reached the end of the file
-            
-            vacancy = eval(lines[0])  # Convert vacancy list string to list
-            if 1 in vacancy:  # Check if there are any occupied slots in the page
-                for i, is_occupied in enumerate(vacancy):
-                    if is_occupied:
-                        record_fields = lines[i + 1].split()
-                        record_primary_key = record_fields[primary_key_index]
-                        if record_primary_key == search_primary_key:
-                            # Mark the vacancy list to indicate this slot is now vacant
-                            vacancy[i] = 0
-                            # Clear the record in the page
-                            lines[i + 1] = ""
-                            
-                            # Update the vacancy list in the page
-                            lines[0] = str(vacancy)
-                            
-                            # Go back to the start of this page in the file
-                            f.seek(current_position)
-                            f.write("\n".join(lines) + "\n")
-                            # f.truncate()  # Truncate the file to remove leftover content
-                            
-                            f.close()
-                            return True  # Record successfully deleted
-        f.close()
-    return False  # Record not found """
-
-    
 def search_record(type_name, primary_key):
-    with open(f"{type_name}.txt", 'r') as f:
-        primary_key_index = int(f.readline().strip())
-        while True:
-            lines = [f.readline().strip() for _ in range(10)]
-            if not lines[0]:
-                break  # Reached the end of the file
+    page_num = 0
 
-            vacancy = eval(lines[0])  # Convert vacancy list string to list
-            if 1 in vacancy:  # Check if there are any records in the page
+    while os.path.exists(f"{type_name}/page_{page_num}.txt"):
+        page_path = f"{type_name}/page_{page_num}.txt"
+        with open(page_path, 'r') as f:
+            primary_key_index = int(f.readline().strip())
+            vacancy = eval(f.readline().strip())
+            lines = [f.readline().strip() for _ in range(9)]
+            
+            if 1 in vacancy:
                 for i, is_occupied in enumerate(vacancy):
                     if is_occupied:
-                        record_fields = lines[i + 1].split()
+                        record_fields = lines[i].split()
                         record_primary_key = record_fields[primary_key_index]
                         if record_primary_key == primary_key:
-                            f.close()
-                            return record_fields  # Record found
-        f.close()
-    return None
+                            return record_fields
+        
+        page_num += 1
 
+    return None
 
 def log_operation(operation, status):
     with open('log.txt', 'a') as h:
         h.write(f"{int(time.time())}, {operation}, {status}\n")
-
 
 def in_create_type(operation):
     _, _, type_name, num_fields, primary_key_index, *fields = operation.split()
@@ -230,31 +127,32 @@ def in_create_type(operation):
     if len(fields) > MAX_NUMBER_OF_FIELDS or len(type_name) > MAX_TYPE_NAME_LENGTH or any(len(f[0]) > MAX_FIELD_NAME_LENGTH for f in fields):
         log_operation(operation, 'failure')
         return
-    if os.path.exists(f"{type_name}.txt"):
+    if os.path.exists(f"{type_name}"):
         log_operation(operation, 'failure')
     else:
         initialize_type(type_name, primary_key_index)
         log_operation(operation, 'success')
 
-
 def in_create_record(operation):
     _, _, type_name, *values = operation.split()
     
-    with open(f"{type_name}.txt", 'r') as f:
+    if not os.path.exists(f"{type_name}"):
+        log_operation(operation, 'failure')
+        return
+    
+    with open(f"{type_name}/page_0.txt", 'r') as f:
         primary_key_index = int(f.readline().strip())
         primary_key = values[primary_key_index]
-        f.close()
 
     if search_record(type_name, primary_key):
         log_operation(operation, 'failure')
     else:
         add_record(type_name, values)
         log_operation(operation, 'success')
-        
 
 def in_delete_record(operation):
     _, _, type_name, delete_primary_key = operation.split()
-    if not os.path.exists(f"{type_name}.txt"):
+    if not os.path.exists(f"{type_name}"):
         log_operation(operation, 'failure')
         return
     if delete_record(type_name, delete_primary_key):
@@ -262,11 +160,9 @@ def in_delete_record(operation):
     else:
         log_operation(operation, 'failure')
 
-
 def in_search_record(operation):
     _, _,  type_name, search_primary_key = operation.split()
     record = search_record(type_name, search_primary_key)
-    print(record)
     if record:
         log_operation(operation, 'success')
         return record
@@ -274,10 +170,10 @@ def in_search_record(operation):
         log_operation(operation, 'failure')
         return ""
 
-
 def main(input_file):
     with open(input_file, 'r') as f:
         operations = f.readlines()
+    results = []
     for operation in operations:
         if operation.startswith('create type'):
             in_create_type(operation.strip())
@@ -288,11 +184,9 @@ def main(input_file):
         elif operation.startswith('search record'):
             result = in_search_record(operation.strip())
             if result:
-                with open('output.txt', 'a') as g:
-                    g.write(" ".join(result))
-                    g.write("\n")
-                    g.close()
-
+                results.append(result)
+    with open('output.txt', 'w') as g:
+        g.write("\n".join([" ".join(result) for result in results]))
 
 if __name__ == "__main__":
     import sys
