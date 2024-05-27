@@ -173,6 +173,7 @@ def in_search_record(operation):
 def main(input_file):
     with open(input_file, 'r') as f:
         operations = f.readlines()
+    results = []
     for operation in operations:
         if operation.startswith('create type'):
             in_create_type(operation.strip())
@@ -183,9 +184,9 @@ def main(input_file):
         elif operation.startswith('search record'):
             result = in_search_record(operation.strip())
             if result:
-                with open('output.txt', 'a') as g:
-                    g.write(" ".join(result))
-                    g.write("\n")
+                results.append(result)
+    with open('output.txt', 'w') as g:
+        g.write("\n".join([" ".join(result) for result in results]))
 
 if __name__ == "__main__":
     import sys
